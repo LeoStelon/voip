@@ -1,6 +1,6 @@
 const Message=require('../models/message')
 var webSocketServer = new (require("ws").Server)({
-	port: process.env.PORT || 8080,
+	port: process.env.PORT+1 || 8080,
 });
 var socketsList = {};
 

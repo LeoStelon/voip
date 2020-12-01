@@ -68,7 +68,7 @@
 
 			function initChat(){
 				document.querySelector("#messages").innerHTML=''
-				fetch(`http://localhost:3000/message/all/${userid}/${touserid}`)
+				fetch(`/message/all/${userid}/${touserid}`)
 				.then((res) => res.json())
 				.then((res) => {
 					console.log(res);
@@ -83,7 +83,7 @@
 
 			// Friend List
 			function friendList(){
-				fetch(`http://localhost:3000/message/chat/${userid}/`)
+				fetch(`/message/chat/${userid}/`)
 				.then((res) => res.json())
 				.then((res) => {
 					console.log(res);
@@ -94,7 +94,7 @@
 			}
 
 			const ws = new WebSocket(
-				"ws://localhost:8080/" + userid + "/" + touserid
+				location.origin.replace(/^http/, 'ws').replace('3000','8080') + "/" + userid + "/" + touserid
 			);
 
 			ws.onopen = function () {
