@@ -1,5 +1,4 @@
 require('./database/mongoose')
-require('./ws/ws')
 const path=require("path")
 var cors = require('cors')
 const express=require('express')
@@ -8,6 +7,10 @@ const Message = require('./routers/message')
 
 const port=process.env.PORT || 3000
 const app=express()
+
+const http = require('http');
+const server = http.createServer(app);
+require('./ws/ws')(server)
 
 const publicDirectoryPath = path.join(__dirname,'../public')
 
@@ -22,6 +25,6 @@ app.get('/test',(req,res)=>{
     res.send({message:'Server OK.'})
 })
 
-app.listen(port,()=>{
+server.listen(port,()=>{
     console.log('Server listening on port '+port)
 })

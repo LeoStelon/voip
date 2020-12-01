@@ -61,6 +61,7 @@
 					element.style.backgroundColor='rgb(170, 170, 170)'
 
 					touserid=e.target.innerHTML;
+					console.log(touserid)
 					document.querySelector('.title-chat').innerHTML='Chat with user '+touserid
 					initChat()
 				})
@@ -94,7 +95,7 @@
 			}
 
 			const ws = new WebSocket(
-				location.origin.replace(/^http/, 'ws').replace('3000','8080') + "/" + userid + "/" + touserid
+				location.origin.replace(/^http/, 'ws') + "/" + userid + "/" + touserid
 			);
 
 			ws.onopen = function () {
@@ -105,6 +106,7 @@
 							message: document.querySelector("#message").value,
 						})
 					);
+					document.getElementById('message').value=''
 				});
 			};
 
@@ -113,7 +115,6 @@
 			};
 
 			ws.onmessage = function (msg) {
-				console.log(msg)
 				const formattedResponse=JSON.parse(msg.data)
 				if((touserid===formattedResponse.touserid && touserid!==userid) || formattedResponse.userid==userid){
 					document.querySelector(
