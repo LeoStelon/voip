@@ -46,8 +46,9 @@
 			const url = new URL(window.location.href);
 			// ID
 			var userid = url.searchParams.get("userid");
+			var username = localStorage.getItem("username");
 			var touserid;
-			document.querySelector('#sidebar h1').innerHTML+=`(user:${userid})`
+			document.querySelector('#sidebar h1').innerHTML+=`<br>(user:${username})`
 
 			// friendList()
 

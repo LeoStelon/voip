@@ -9,8 +9,8 @@ var webSocketServer= function(server) {
   
     socketsList[userId]=webSocket;
   
-    webSocket.on("message", async (response) => {
-      var formattedResponse=JSON.parse(response)
+    webSocket.on("message", async (data) => {
+      var formattedResponse=JSON.parse(data)
   
       // Storing Message in DB
       const message=new Message({userid:userId,toUserId:formattedResponse.touserid,message:formattedResponse.message})
@@ -29,7 +29,6 @@ var webSocketServer= function(server) {
       // }else{
       //   webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
       // }
-      toUserWebSocket===undefined
       /// This should be changed when when using real users(Uncomment above code and comment or remove the below code)
       if(toUserWebSocket===undefined){
         webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))

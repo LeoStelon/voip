@@ -10,6 +10,7 @@ const app=express()
 
 const http = require('http');
 const server = http.createServer(app);
+//Websocket Server
 require('./ws/ws')(server)
 
 const publicDirectoryPath = path.join(__dirname,'../public')

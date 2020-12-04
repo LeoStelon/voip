@@ -3,6 +3,7 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const ForgotPassword = require("./forgotpass");
+const path=require("path")
 
 const userSchema = new mongoose.Schema({
 	username: {
@@ -24,10 +25,13 @@ const userSchema = new mongoose.Schema({
 	},
 	password: {
 		type: String,
-		unique: true,
-		required: true,
 		trim: true,
 		minlength: 6,
+	},
+	displayimg:{
+		type:String,
+		default:path.join(__dirname,'../public/assets/images/default-profile-icon.png'),
+		required:true,
 	},
 	phone: {
 		type: Number,
@@ -82,11 +86,11 @@ userSchema.methods.generateForgotToken = async function () {
 userSchema.statics.findByCredentials = async function (username, password) {
 	const user = await User.findOne({ username });
 	if (!user) {
-		throw new Error("Unable to login");
+		throw new Error("Invalid username or password");
 	}
 	const isMatch = await bcrypt.compare(password, user.password);
 	if (!isMatch) {
-		throw new Error("Unable to login");
+		throw new Error("Invalid username or password");
 	}
 	return user;
 };
