@@ -51,16 +51,17 @@
                         "Content-Type":"application/json"
                     },
 				    body:JSON.stringify({
-				        username:"updateusername",
-				        password:"123456"
+				        username:username,
+				        password:password
 				    })
 				})
 				    .then(res=>res.json())
 				    .then(res=>{
 				        console.log(res)
 				        localStorage.setItem('token',res.token);
+				        localStorage.setItem('_id',res.user._id);
 				        localStorage.setItem('username',res.user.username);
-				        localStorage.setItem('token',res.user.displayimg);
+				        localStorage.setItem('displayImg',res.user.displayimg);
 				        window.open('./ws.html')
 				    })
 			});

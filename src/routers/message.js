@@ -1,26 +1,41 @@
 const express = require("express");
 const Message = require("../models/message");
-const { route } = require("./user");
+const User = require("../models/user");
 const router = express.Router();
+var mongoose = require('mongoose');
+const auth = require("../middlewares/auth");
 
 // Get Message
-router.get("/message/all/:userid/:toUserId", async (req, res) => {
-	const messages = await Message.find({
-		$or: [
-			{
-				userid: req.params.userid,
-				toUserId: req.params.toUserId,
-			},
-			{ userid: req.params.toUserId, toUserId: req.params.userid },
-		],
-	});
-	res.send({ data: messages });
+router.get("/message/all/:touserid", auth,async (req, res) => {
+	const userid=req.user._id;
+	const touserid=req.params.touserid;
+	try{
+		const messages = await Message.find({
+			$or: [
+				{
+					userid,
+					touserid,
+				},
+				{ userid: touserid, touserid: userid },
+			],
+		});
+		res.send({ data: messages });
+	}catch(e){
+		if(!mongoose.Types.ObjectId.isValid(userid) || !mongoose.Types.ObjectId.isValid(touserid)){
+			return res.status(500).send({ message: 'Provide proper id\'s' });
+		}
+		res.status(500).send({ message: e.message });
+	}
 });
 
 // Get Chat
-router.get('/message/chat/:userid',async (req,res)=>{
-    const chat=await Message.find({userid:req.params.userid},"toUserId")
-    res.send({data:chat})
+router.get('/message/chat',auth,async (req,res)=>{
+    try{
+		let channels=await User.findById(req.user._id,"channels").populate('channels.channel','-tokens -password').exec();
+    	res.send(channels)
+	}catch(e){
+		res.status(500).send({ message: e.message });
+	}
 })
 
 module.exports = router;

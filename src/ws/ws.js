@@ -1,48 +1,100 @@
 const Message=require('../models/message')
+const User = require("../models/user");
+const jwt = require("jsonwebtoken");
 
 var webSocketServer= function(server) {
   var webSocketServer = new (require("ws").Server)({ server });
   var socketsList = {};
-  webSocketServer.on("connection",async function (webSocket, req) {
-    // Userid
-    const userId = req.url.split("/")[1];
+
+  // Check if token exist in DB or if it is valid
+  async function validateToken(token){
+    try{
+      const decoded = jwt.decode(token, process.env.JWT_SECRET);
+      if(!socketsList[decoded._id]){
+        const user = await User.findOne({
+          _id: decoded._id,
+          "tokens.token": token,
+        });
+
+        return user;
+      }
+      return socketsList[decoded._id].user;
+    }catch(e){
+      return null
+    }
+  }
   
-    socketsList[userId]=webSocket;
+  webSocketServer.on("connection",async function (webSocket, req) {
+    // Token from websocket url
+    const token = req.url.split("/")[1];
+    // Userid
+    let userId;
+    // Check if user is verified already,if yes dont check again
+    const user = await validateToken(token);
+	if (user) {
+		userId = user._id;
+		socketsList[user._id] = { webSocket, user };
+	} else {
+		userId = null;
+		webSocket.send(
+			JSON.stringify({
+				message: "Invalid token, please refresh your token!",
+				token,
+			})
+		);
+	}
+    
   
     webSocket.on("message", async (data) => {
-      var formattedResponse=JSON.parse(data)
-  
-      // Storing Message in DB
-      const message=new Message({userid:userId,toUserId:formattedResponse.touserid,message:formattedResponse.message})
-      await message.save()
-  
-      var toUserWebSocket = socketsList[formattedResponse.touserid];
-      // Invalid userid validation
+			// Check if response is JSON valid.
+			try {
+				var formattedResponse = JSON.parse(data);
+			} catch (e) {
+				return webSocket.send(
+					JSON.stringify({
+						message: "Invalid response recieved.",
+					})
+				);
+			}
 
-      /// Should be checked with backend if user exists
-      /// uncomment this
-      // if(toUserWebSocket===undefined)return webSocket.send('invalid touserid')
-  
-      // if(userId!==formattedResponse.touserid){
-      //   toUserWebSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:userId+" : "+formattedResponse.message}));
-      //   webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
-      // }else{
-      //   webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
-      // }
-      /// This should be changed when when using real users(Uncomment above code and comment or remove the below code)
-      if(toUserWebSocket===undefined){
-        webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
-      }else if(userId!==formattedResponse.touserid){
-        toUserWebSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:userId+" : "+formattedResponse.message}));
-        webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
-      }else{
-        webSocket.send(JSON.stringify({userid:userId,touserid:formattedResponse.touserid,message:'You : '+formattedResponse.message}))
-      }
-    });
+			if (userId === null) {
+				return webSocket.send(
+					JSON.stringify({
+						userid: null,
+						touserid: null,
+						message: "Invalid token, please refresh your token",
+					})
+				);
+			}
+
+			// Storing Message in DB
+			const message = new Message({
+				userid: userId,
+				touserid: formattedResponse.touserid,
+				message: formattedResponse.message,
+			});
+			await message.save();
+
+			var toUserWebSocket = socketsList[formattedResponse.touserid]
+				? socketsList[formattedResponse.touserid].webSocket
+				: undefined;
+
+			// Invalid userid validation
+			if (toUserWebSocket === undefined)
+				return webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
+
+			if (userId !== formattedResponse.touserid) {
+				toUserWebSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
+				webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
+			} else {
+				webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
+			}
+		});
   
     webSocket.on("close", (message) => {
-      console.log("connection closed");
-    });
+			webSocket.send("connection closed");
+			console.log("connection closed");
+		});
   });
 }
 

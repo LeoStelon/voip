@@ -1,21 +1,18 @@
 <html>
 	<head>
 		<script>
-			while(screen.width<=835){
-				alert('As site is only for testing puropose, it would be better if your testing this on wide monitor with width above 840px as this site is not responsive.')
+			while (screen.width <= 835) {
+				alert(
+					"As site is only for testing puropose, it would be better if your testing this on wide monitor with width above 840px as this site is not responsive."
+				);
 			}
 		</script>
-		<link rel="stylesheet" href="./styles/ws.css">
+		<link rel="stylesheet" href="./styles/ws.css" />
 	</head>
 	<body>
 		<section id="sidebar">
 			<h1>Chat</h1>
-			<div class="toUserList">
-				<p class="touserid">1</p>
-				<p class="touserid">2</p>
-				<p class="touserid">3</p>
-				<p class="touserid">4</p>
-			</div>
+			<div class="toUserList"></div>
 		</section>
 
 		<section id="chat">
@@ -34,80 +31,101 @@
 			<a href="ws.html?userid=2" target="_blank">User 2</a>
 			<a href="ws.html?userid=3" target="_blank">User 3</a>
 			<a href="ws.html?userid=4" target="_blank">User 4</a>
-			<br>
-			<br>
+			<br />
+			<br />
 			<p>1.Chat marked in blue means there is a new message from that user</p>
-			<br>
-			<p>2.Above are dummy users without authentication, only messages sent are linked with Database</p>
+			<br />
+			<p>
+				2.Above are dummy users without authentication, only messages sent are
+				linked with Database
+			</p>
 		</section>
 
 		<script type="text/javascript">
 			// Search Param reference
 			const url = new URL(window.location.href);
 			// ID
-			var userid = url.searchParams.get("userid");
+			var userid = localStorage.getItem("_id");
 			var username = localStorage.getItem("username");
+			var token = localStorage.getItem("token");
 			var touserid;
-			document.querySelector('#sidebar h1').innerHTML+=`<br>(user:${username})`
+			var chatList;
+			document.querySelector(
+				"#sidebar h1"
+			).innerHTML += `<br>(user:${username})`;
 
-			// friendList()
+			friendList();
 
-			// Chat
-			Array.from(document.getElementsByClassName('touserid')).forEach(element=>{
-				element.addEventListener('click',(e)=>{
-					// Disable send after selecting chat
-					document.querySelector("#send").disabled = false;
-
-					// Change background color if its blue(when new message recieved)
-					element.style.backgroundColor='rgb(170, 170, 170)'
-
-					touserid=e.target.innerHTML;
-					console.log(touserid)
-					document.querySelector('.title-chat').innerHTML='Chat with user '+touserid
-					initChat()
+			function initChat() {
+				document.querySelector("#messages").innerHTML = "";
+				fetch(`/message/all/${touserid}`, {
+					headers: {
+						Authorization: "Bearer " + token,
+					},
 				})
-			})
-
-			function initChat(){
-				document.querySelector("#messages").innerHTML=''
-				fetch(`/message/all/${userid}/${touserid}`)
-				.then((res) => res.json())
-				.then((res) => {
-					console.log(res);
-					res.data.forEach((message) => {
-						document.querySelector("#messages").innerHTML += `<div>${
-							(userid === message.userid ? "You : " : message.userid+' : ') +
-							message.message
-						}</div>`;
+					.then((res) => res.json())
+					.then((res) => {
+						console.log(res);
+						res.data.forEach((message) => {
+							document.querySelector("#messages").innerHTML += `<div>${
+								(userid === message.userid
+									? "You : "
+									: message.userid + " : ") + message.message
+							}</div>`;
+						});
 					});
-				});
 			}
 
 			// Friend List
-			function friendList(){
-				fetch(`/message/chat/${userid}/`)
-				.then((res) => res.json())
-				.then((res) => {
-					console.log(res);
-					res.data.forEach((message) => {
-						document.querySelector(".toUserList").innerHTML += `<p class="touserid">${message.toUserId}</p>`;
+			function friendList() {
+				fetch(`/message/chat`, {
+					headers: {
+						Authorization: "Bearer " + token,
+					},
+				})
+					.then((res) => res.json())
+					.then((res) => {
+						chatList = res.channels.map((c) => c.channel._id);
+						res.channels.forEach((channel) => {
+							const user = channel.channel;
+							document.querySelector(
+								".toUserList"
+							).innerHTML += `<p class="touserid">${user._id}</p>`;
+						});
+						// Chat
+						Array.from(document.getElementsByClassName("touserid")).forEach(
+							(element) => {
+								element.addEventListener("click", (e) => {
+									// Disable send after selecting chat
+									document.querySelector("#send").disabled = false;
+
+									// Change background color if its blue(when new message recieved)
+									element.style.backgroundColor = "rgb(170, 170, 170)";
+
+									touserid = e.target.innerHTML;
+									document.querySelector(".title-chat").innerHTML =
+										"Chat with user " + touserid;
+									initChat();
+								});
+							}
+						);
 					});
-				});
 			}
 
 			const ws = new WebSocket(
-				location.origin.replace(/^http/, 'ws') + "/" + userid + "/" + touserid
+				location.origin.replace(/^http/, "ws") + "/" + token
 			);
 
 			ws.onopen = function () {
+				console.log("connected");
 				document.querySelector("#send").addEventListener("click", function () {
 					ws.send(
 						JSON.stringify({
-							touserid,
+							touserid: touserid,
 							message: document.querySelector("#message").value,
 						})
 					);
-					document.getElementById('message').value=''
+					document.getElementById("message").value = "";
 				});
 			};
 
@@ -116,17 +134,36 @@
 			};
 
 			ws.onmessage = function (msg) {
-				const formattedResponse=JSON.parse(msg.data)
-				if((touserid===formattedResponse.touserid && touserid!==userid) || formattedResponse.userid==userid){
-					document.querySelector(
-						"#messages"
-					).innerHTML += `<div>${formattedResponse.message}</div>`;
-				}else{
-					Array.from(document.getElementsByClassName('touserid')).forEach(element=>{
-						if(element.innerHTML===formattedResponse.userid){
-							element.style.backgroundColor='lightblue'
+				const formattedResponse = JSON.parse(msg.data);
+				// Checking if its from new person
+				if (
+					!(
+						chatList.includes(formattedResponse.userid) ||
+						chatList.includes(formattedResponse.touserid)
+					)
+				) {
+					friendList();
+				}
+
+				// Highlight message when not in focus or add to chat list
+				// (touserid === formattedResponse.touserid && touserid !== userid) 
+				if (
+					touserid === formattedResponse.userid ||
+					formattedResponse.userid === userid
+				) {
+					document.querySelector("#messages").innerHTML += `<div>${
+						formattedResponse.userid === userid
+							? "You: " + formattedResponse.message
+							: formattedResponse.touserid + ": " + formattedResponse.message
+					}</div>`;
+				} else {
+					Array.from(document.getElementsByClassName("touserid")).forEach(
+						(element) => {
+							if (element.innerHTML === formattedResponse.userid) {
+								element.style.backgroundColor = "lightblue";
+							}
 						}
-					})
+					);
 				}
 			};
 		</script>

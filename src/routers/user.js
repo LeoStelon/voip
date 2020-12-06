@@ -26,8 +26,10 @@ const router = express.Router();
 
 // Create
 router.post("/user", upload.single("displayimg"), async (req, res) => {
-	const user = new User(req.body);
-	user.displayimg = req.file.path;
+	const user = new User({
+		...req.body,
+		displayimg : req.file.path
+	});
 	try {
 		await user.save();
 		const token = await user.generateToken();

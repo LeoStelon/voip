@@ -3,7 +3,7 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const ForgotPassword = require("./forgotpass");
-const path=require("path")
+const path = require("path");
 
 const userSchema = new mongoose.Schema({
 	username: {
@@ -28,10 +28,13 @@ const userSchema = new mongoose.Schema({
 		trim: true,
 		minlength: 6,
 	},
-	displayimg:{
-		type:String,
-		default:path.join(__dirname,'../public/assets/images/default-profile-icon.png'),
-		required:true,
+	displayimg: {
+		type: String,
+		default: path.join(
+			__dirname,
+			"../public/assets/images/default-profile-icon.png"
+		),
+		required: true,
 	},
 	phone: {
 		type: Number,
@@ -44,6 +47,15 @@ const userSchema = new mongoose.Schema({
 			}
 		},
 	},
+	channels: [
+		{
+			channel: {
+				type: mongoose.Types.ObjectId,
+				required: true,
+				ref: "User",
+			},
+		},
+	],
 	tokens: [
 		{
 			token: {
