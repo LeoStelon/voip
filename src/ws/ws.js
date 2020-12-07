@@ -46,50 +46,52 @@ var webSocketServer= function(server) {
     
   
     webSocket.on("message", async (data) => {
-			// Check if response is JSON valid.
-			try {
-				var formattedResponse = JSON.parse(data);
-			} catch (e) {
-				return webSocket.send(
-					JSON.stringify({
-						message: "Invalid response recieved.",
-					})
-				);
-			}
+		// Check if response is JSON valid.
+		try {
+			var formattedResponse = JSON.parse(data);
+		} catch (e) {
+			return webSocket.send(
+				JSON.stringify({
+					message: "Invalid response recieved.",
+				})
+			);
+		}
 
-			if (userId === null) {
-				return webSocket.send(
-					JSON.stringify({
-						userid: null,
-						touserid: null,
-						message: "Invalid token, please refresh your token",
-					})
-				);
-			}
+		if (userId === null) {
+			return webSocket.send(
+				JSON.stringify({
+					userid: null,
+					touserid: null,
+					message: "Invalid token, please refresh your token",
+				})
+			);
+		}
 
-			// Storing Message in DB
-			const message = new Message({
-				userid: userId,
-				touserid: formattedResponse.touserid,
-				message: formattedResponse.message,
-			});
-			await message.save();
-
-			var toUserWebSocket = socketsList[formattedResponse.touserid]
-				? socketsList[formattedResponse.touserid].webSocket
-				: undefined;
-
-			// Invalid userid validation
-			if (toUserWebSocket === undefined)
-				return webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
-
-			if (userId !== formattedResponse.touserid) {
-				toUserWebSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
-				webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
-			} else {
-				webSocket.send(JSON.stringify({userid: userId,touserid: formattedResponse.touserid,message: formattedResponse.message,}));
-			}
+		// Storing Message in DB
+		const message = new Message({
+			userid: userId,
+			touserid: formattedResponse.touserid,
+			message: formattedResponse.message,
 		});
+		const response=await message.save();
+		await response
+			.populate({ path: "userid", select: "-tokens -password -channels" })
+			.populate({ path: "touserid", select: "-tokens -password -channels" })
+			.execPopulate();
+
+		var toUserWebSocket = socketsList[formattedResponse.touserid]
+			? socketsList[formattedResponse.touserid].webSocket
+			: undefined;
+
+		// Invalid userid validation
+		if (toUserWebSocket === undefined)
+			return webSocket.send(JSON.stringify(response));
+
+		webSocket.send(JSON.stringify(response));
+		if (userId !== formattedResponse.touserid) {
+			toUserWebSocket.send(JSON.stringify(response));
+		}
+	});
   
     webSocket.on("close", (message) => {
 			webSocket.send("connection closed");

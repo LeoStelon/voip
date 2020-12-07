@@ -14,13 +14,18 @@
 				font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
 					"Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 			}
-			div {
+			body>div {
 				border-radius: 8px;
 				box-shadow: 0px 0px 0px 1px #ccc;
 				padding: 16px;
 				display: flex;
 				flex-direction: column;
 				align-items: center;
+			}
+			.signup-container{
+				display: flex;
+				flex-direction: column;
+				display: none;
 			}
 			input {
 				margin: 8px;
@@ -31,28 +36,56 @@
 				padding: 4px 16px;
 				cursor: pointer;
 			}
+			a{
+				color: blue;
+				cursor: pointer;
+			}
 		</style>
 	</head>
 	<body>
 		<div>
 			<h1>Please login to continue</h1>
 			<input type="text" class="username" placeholder="Username" required />
+			<div class="signup-container">
+				<input type="number" class="phone" placeholder="Phone Number">
+				<input type="email" class="email" placeholder="Email">
+				<input type="password" class="repassword" placeholder="Confirm Password" required />
+			</div>
 			<input type="password" class="password" placeholder="Password" required />
 			<button id="login">Login</button>
+			<br>
+			<a class="toggle">singup</a>
 		</div>
 
 		<script>
+			let isLoggin=true;
+			// Login and Signup toggle
+			document.querySelector('.toggle').addEventListener('click',(e)=>{
+				document.querySelector('.signup-container').style.display=isLoggin?'flex':'none';
+				document.querySelector('.toggle').innerHTML=isLoggin?'login':'signup';
+				document.getElementById('login').innerHTML=isLoggin?'Signup':'Login';
+				isLoggin=!isLoggin;
+			})
+
+			// Login or Signup Button
 			document.getElementById("login").addEventListener("click", (e) => {
 				const username = document.querySelector(".username").value;
-                const password = document.querySelector(".password").value;
-				fetch('/user/login',{
+				const email = document.querySelector(".email").value;
+				const phone = document.querySelector(".phone").value;
+				const password = document.querySelector(".password").value;
+				const repassword = document.querySelector(".repassword").value;
+
+				const url=isLoggin?'/user/login':'/user';
+				fetch(url,{
                     method:"POST",
                     headers:{
                         "Content-Type":"application/json"
                     },
 				    body:JSON.stringify({
-				        username:username,
-				        password:password
+				        username,
+				        password,
+				        email,
+				        phone,
 				    })
 				})
 				    .then(res=>res.json())
@@ -62,7 +95,7 @@
 				        localStorage.setItem('_id',res.user._id);
 				        localStorage.setItem('username',res.user.username);
 				        localStorage.setItem('displayImg',res.user.displayimg);
-				        window.open('./ws.html')
+				        // window.location.href='./ws.html';
 				    })
 			});
 		</script>

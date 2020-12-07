@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const User = require("../models/user");
 const auth = require("../middlewares/auth");
@@ -28,7 +29,12 @@ const router = express.Router();
 router.post("/user", upload.single("displayimg"), async (req, res) => {
 	const user = new User({
 		...req.body,
-		displayimg : req.file.path
+		displayimg: req.file
+			? req.file.path
+			: path.join(
+					__dirname,
+					"../public/assets/images/default-profile-icon.png"
+			  ),
 	});
 	try {
 		await user.save();
@@ -63,8 +69,20 @@ router.delete("/user/logout", auth, async (req, res) => {
 });
 
 // Read
-router.get("/user/me", auth, (req, res) => {
+router.get("/user/@me", auth, (req, res) => {
 	res.send(req.user);
+});
+
+// Find User
+router.get("/user", auth, async (req, res) => {
+	const search = req.query.search;
+	const limit = req.query.limit;
+	// const users=await User.find({$or:[{phoneno:{$regex:search}},{username:{$regex:search}}]})
+	const users = await User.find(
+		{ username: { $regex: search } },
+		"-channels"
+	).limit(parseInt(limit) || 10);
+	res.send(users);
 });
 
 // Update
