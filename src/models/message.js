@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const auth = require("../middlewares/auth");
 const User = require("./user");
 
 const messageSchema = new mongoose.Schema(
@@ -16,9 +15,16 @@ const messageSchema = new mongoose.Schema(
 		},
 		message: {
 			type: String,
-			required: true,
+			default: "",
 			trim: true,
 		},
+		attachments: [
+			{
+				type: mongoose.Types.ObjectId,
+				required: true,
+				ref: "Attachment",
+			},
+		],
 		seen: {
 			type: Boolean,
 			required: true,

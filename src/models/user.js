@@ -3,7 +3,6 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const ForgotPassword = require("./forgotpass");
-const path = require("path");
 
 const userSchema = new mongoose.Schema({
 	username: {
@@ -30,10 +29,7 @@ const userSchema = new mongoose.Schema({
 	},
 	displayimg: {
 		type: String,
-		default: path.join(
-			__dirname,
-			"../public/assets/images/default-profile-icon.png"
-		),
+		default: "/assets/images/default-profile-icon.jpg",
 		required: true,
 	},
 	phone: {

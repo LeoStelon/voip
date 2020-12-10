@@ -72,11 +72,13 @@ var webSocketServer= function(server) {
 			userid: userId,
 			touserid: formattedResponse.touserid,
 			message: formattedResponse.message,
+			attachments:formattedResponse.attachments,
 		});
 		const response=await message.save();
 		await response
 			.populate({ path: "userid", select: "-tokens -password -channels" })
 			.populate({ path: "touserid", select: "-tokens -password -channels" })
+			.populate({ path: "attachments" })
 			.execPopulate();
 
 		var toUserWebSocket = socketsList[formattedResponse.touserid]
