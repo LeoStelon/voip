@@ -25,40 +25,6 @@ const upload = multer({
 
 const router = express.Router();
 
-// Create
-router.post("/user", upload.single("displayimg"), async (req, res) => {
-	const user = new User({
-		...req.body,
-		displayimg: req.file
-			? req.file.path
-			: path.join(
-					__dirname,
-					"../public/assets/images/default-profile-icon.png"
-			  ),
-	});
-	try {
-		await user.save();
-		const token = await user.generateToken();
-		res.status(201).send({ user, token });
-	} catch (e) {
-		res.status(400).send({ message: e.message });
-	}
-});
-
-// Login
-router.post("/user/login", async (req, res) => {
-	try {
-		const user = await User.findByCredentials(
-			req.body.username,
-			req.body.password
-		);
-		const token = await user.generateToken();
-		res.send({ user, token });
-	} catch (e) {
-		res.status(500).send({ message: e.message });
-	}
-});
-
 // Logout
 router.delete("/user/logout", auth, async (req, res) => {
 	req.user.tokens = req.user.tokens.filter(
@@ -85,29 +51,39 @@ router.get("/user", auth, async (req, res) => {
 	res.send(users);
 });
 
-// Update
-router.patch("/user", auth, upload.single("displayimg"), async (req, res) => {
+// Login Or Create
+router.post("/user", upload.single("displayimg"), async (req, res) => {
 	const updates = Object.keys(req.body);
-	const availableUpdates = [
-		"username",
-		"email",
-		"password",
-		"phone",
-		"displayimg",
-	];
+	const availableUpdates = ["username", "phone", "displayimg"];
 	const isValid = updates.every((update) => availableUpdates.includes(update));
-
 	if (!isValid) {
 		return res.status(400).send();
 	}
 
-	updates.forEach((update) => (req.user[update] = req.body[update]));
 	if (req.file) {
-		req.user.displayimg = req.file.path;
+		req.body.displayimg = req.file.path;
 	}
+
 	try {
-		await req.user.save();
-		res.send(req.user);
+		const user = await User.findOneAndUpdate(
+			{ phone: req.body.phone },
+			req.body,
+			{
+				upsert: true,
+				new: true,
+				setDefaultsOnInsert: true,
+				useFindAndModify: false,
+			}
+		);
+		if (!user.username) {
+			user.username =
+				"user" +
+				Date.now().toString().split("").reverse().join("").slice(0, 4) +
+				user.phone.toString().slice(0, 3);
+			await user.save();
+		}
+		const token = await user.generateToken();
+		res.status(201).send({ user, token });
 	} catch (e) {
 		res.status(500).send({ message: e.message });
 	}

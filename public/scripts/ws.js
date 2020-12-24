@@ -6,13 +6,14 @@ var username = localStorage.getItem("username");
 var token = localStorage.getItem("token");
 var touserid;
 var chatList;
+var isGroup;
 document.querySelector("#sidebar h1").innerHTML += `<br>(user:${username})`;
 
 friendList();
 
-function initChat() {
+function initChat(isgroup) {
 	document.querySelector("#messages").innerHTML = "";
-	fetch(`/message/@${touserid}`, {
+	fetch(`/message/@${touserid}?isgroup=${isgroup}`, {
 		headers: {
 			Authorization: "Bearer " + token,
 		},
@@ -54,7 +55,7 @@ function initChat() {
 }
 
 // Search Users
-document.getElementById("info-search").addEventListener("input", (e) => {
+document.getElementById("info-search").addEventListener("input",async (e) => {
 	document.querySelector(".toUserList").innerHTML = "";
 	if (e.target.value === "") return friendList();
 	fetch(`/user?search=${e.target.value}`, {
@@ -63,18 +64,37 @@ document.getElementById("info-search").addEventListener("input", (e) => {
 		},
 	})
 		.then((res) => res.json())
-		.then((res) => {
-			console.log(res);
-			if (res.length === 0)
-				return (document.querySelector(".info-userlist").innerHTML =
-					"<h4>No user's found :(</h4>");
-			res.forEach((user) => {
+		.then((users) => {
+			console.log(users);
+			users.forEach((user) => {
 				document.querySelector(
 					".toUserList"
 				).innerHTML += `<p class="touserid ${user._id}">${user.username}</p>`;
 			});
-			// Change touserid when clicked
-			addListener(document.getElementsByClassName("touserid"));
+			// Search Groups
+			fetch(`/group?search=${e.target.value}`, {
+				headers: {
+					Authorization: "Bearer " + token,
+				},
+			})
+				.then((res) => res.json())
+				.then((groups) => {
+					if (users.length === 0 && groups.length===0)
+						return (document.querySelector(".toUserList").innerHTML =
+							"<h4>No user's or group's found :(</h4>");
+					groups.forEach((group,i) => {
+						if(i===0){
+							document.querySelector(
+								".toUserList"
+							).innerHTML += "<h1>GROUPS</h1>"
+						}
+						document.querySelector(
+							".toUserList"
+						).innerHTML += `<p class="touserid ${group._id}">${group.title}</p>`;
+				})
+				// Change touserid when clicked
+				addListener(document.getElementsByClassName("touserid"));
+			})
 		});
 });
 
@@ -89,12 +109,12 @@ function friendList() {
 		.then((res) => res.json())
 		.then((res) => {
 			console.log(res);
-			chatList = res.channels.map((c) => c.channel._id);
+			chatList = res.channels.map((c) => c.private?c.private._id:c.group._id);
 			res.channels.forEach((channel) => {
-				const user = channel.channel;
+				const user = channel.private?channel.private:channel.group;
 				document.querySelector(
 					".toUserList"
-				).innerHTML += `<p class="touserid ${user._id}">${user.username}</p>`;
+				).innerHTML += `<p class="touserid ${user._id} ${user.username?false:true}">${user.username || user.title}</p>`;
 			});
 			// Change touserid when clicked
 			addListener(document.getElementsByClassName("touserid"));
@@ -111,11 +131,12 @@ function addListener(elementsArray) {
 
 			// Change background color if its blue(when new message recieved)
 			element.style.backgroundColor = "rgb(170, 170, 170)";
-
-			touserid = e.target.getAttribute("class").split(" ")[1];
+			var data=e.target.getAttribute("class").split(" ");
+			touserid = data[1];
 			document.querySelector(".title-chat").innerHTML =
 				"Chat with user " + e.target.innerHTML;
-			initChat();
+			isGroup=data[2];
+			initChat(data[2]);
 		});
 	});
 }
@@ -129,11 +150,13 @@ ws.onopen = function () {
         if(files.length>0){
             sendFile(files);
             return document.querySelector('input[type=file]').value="";
-        }
+		}
+		console.log(isGroup==='true'?'group':'private')
 		ws.send(
 			JSON.stringify({
 				touserid: touserid,
 				message: document.querySelector("#message").value,
+				type:isGroup==='true'?'group':'private'
 			})
 		);
 		document.getElementById("message").value = "";

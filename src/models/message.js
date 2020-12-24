@@ -41,14 +41,17 @@ messageSchema.pre("save", async function (next) {
 	});
 
 	await users.forEach(async (user) => {
-		const channelList = user.channels.map((channel) => channel.channel);
+		const channelList = user.channels.map((channel) => channel.private);
 		if (user._id.equals(message.touserid)) {
 			channelList.indexOf(message.userid) === -1
-				? user.channels.push({ channel: message.userid })
+				? user.channels.push({ private: message.userid, group: message.userid })
 				: null;
 		} else {
 			channelList.indexOf(message.touserid) === -1
-				? user.channels.push({ channel: message.touserid })
+				? user.channels.push({
+						private: message.touserid,
+						group: message.touserid,
+				  })
 				: null;
 		}
 		await user.save();

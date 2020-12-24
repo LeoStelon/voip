@@ -25,19 +25,22 @@ router.get("/message/@:touserid", auth, async (req, res) => {
 	const userid = req.user._id;
 	const touserid = req.params.touserid;
 	const limit = req.query.limit;
+	const isGroup= req.query.isgroup;
 	try {
 		const messages = await Message.find({
-			$or: [
-				{
-					userid,
-					touserid,
-				},
-				{ userid: touserid, touserid: userid },
-			],
+			$or: isGroup==='true'
+				? [{ touserid }]
+				: [
+						{
+							userid,
+							touserid,
+						},
+						{ userid: touserid, touserid: userid },
+				  ],
 		})
 			.populate({ path: "userid", select: "-tokens -password -channels" })
 			.populate({ path: "touserid", select: "-tokens -password -channels" })
-			.populate({ path: "attachments"})
+			.populate({ path: "attachments" })
 			.limit(parseInt(limit))
 			.exec();
 		res.send({ data: messages });
@@ -56,7 +59,17 @@ router.get("/message/@:touserid", auth, async (req, res) => {
 router.get("/message/chat", auth, async (req, res) => {
 	try {
 		let channels = await User.findById(req.user._id, "channels")
-			.populate("channels.channel", "-tokens -password")
+			.populate("channels.private", "-password -tokens -channels")
+			.populate({
+				path:"channels.group",
+				populate : [{
+					path : 'participants',
+					select:'-password -tokens -channels'
+				},{
+					path : 'author',
+					select:'-password -tokens -channels'
+				}]
+			})
 			.exec();
 		res.send(channels);
 	} catch (e) {
@@ -65,26 +78,32 @@ router.get("/message/chat", auth, async (req, res) => {
 });
 
 // Post Media
-router.post("/message", auth, upload.array("media", 5),async (req, res) => {
-	try {
-		let attachments=[];
-		// Storing Attachments in DB
-		for (const file of req.files) {
-			const attachment= new Attachment({
-				filename:file.originalname,
-				type:file.mimetype,
-				path:file.path,
-				size:file.size
-			})
-			await attachment.save();
-			attachments.push(attachment._id)
+router.post(
+	"/message",
+	auth,
+	upload.array("media", 5),
+	async (req, res) => {
+		try {
+			let attachments = [];
+			// Storing Attachments in DB
+			for (const file of req.files) {
+				const attachment = new Attachment({
+					filename: file.originalname,
+					type: file.mimetype,
+					path: file.path,
+					size: file.size,
+				});
+				await attachment.save();
+				attachments.push(attachment._id);
+			}
+			res.send(attachments);
+		} catch (e) {
+			res.status(500).send({ message: e.message });
 		}
-		res.send(attachments);
-	} catch (e) {
-		res.status(500).send({ message: e.message });
+	},
+	(error, req, res, next) => {
+		res.status(400).send({ message: error.message });
 	}
-},(error,req,res,next)=>{
-	res.status(400).send({message:error.message});
-});
+);
 
 module.exports = router;

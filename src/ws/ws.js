@@ -1,4 +1,5 @@
 const Message=require('../models/message')
+const Group = require('../models/group');
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 
@@ -22,6 +23,22 @@ var webSocketServer= function(server) {
     }catch(e){
       return null
     }
+  }
+
+  // Send Message
+  function send(webSocket,formattedResponse,userId,response){
+	var toUserWebSocket = socketsList[formattedResponse.touserid]
+			? socketsList[formattedResponse.touserid].webSocket
+			: undefined;
+
+	// If user is not currently connected to server
+	if (toUserWebSocket === undefined)
+		return webSocket.send(JSON.stringify(response));
+	
+	webSocket.send(JSON.stringify(response));
+	if (userId !== formattedResponse.touserid) {
+		toUserWebSocket.send(JSON.stringify(response));
+	}
   }
   
   webSocketServer.on("connection",async function (webSocket, req) {
@@ -80,19 +97,28 @@ var webSocketServer= function(server) {
 			.populate({ path: "touserid", select: "-tokens -password -channels" })
 			.populate({ path: "attachments" })
 			.execPopulate();
+		if (response.touserid === null) response.touserid = { _id: formattedResponse.touserid };
+		// Group Messaging
+		if(formattedResponse.type==='group'){
+			const group=await Group.findById(formattedResponse.touserid);
+			return group.participants.forEach(p=>{
+				if (socketsList[p])
+					socketsList[p].webSocket.send(JSON.stringify(response));
+				// var toUserWebSocket = socketsList[formattedResponse.touserid]
+				// 	? socketsList[formattedResponse.touserid].webSocket
+				// 	: undefined;
+				// // If user is not currently connected to server
+				// if (toUserWebSocket === undefined)
+				// return webSocket.send(JSON.stringify(response));
 
-		var toUserWebSocket = socketsList[formattedResponse.touserid]
-			? socketsList[formattedResponse.touserid].webSocket
-			: undefined;
-
-		// Invalid userid validation
-		if (toUserWebSocket === undefined)
-			return webSocket.send(JSON.stringify(response));
-
-		webSocket.send(JSON.stringify(response));
-		if (userId !== formattedResponse.touserid) {
-			toUserWebSocket.send(JSON.stringify(response));
+				// webSocket.send(JSON.stringify(response));
+				// if (userId !== formattedResponse.touserid) {
+				// 	toUserWebSocket.send(JSON.stringify(response));
+				// }
+			})
 		}
+		send(webSocket,formattedResponse,userId,response)
+
 	});
   
     webSocket.on("close", (message) => {

@@ -3,6 +3,7 @@ const path=require("path")
 var cors = require('cors')
 const express=require('express')
 const User=require('./routers/user')
+const Group = require('./routers/group')
 const Message = require('./routers/message')
 const ForgotPassword = require('./routers/forgotpass')
 
@@ -24,6 +25,7 @@ app.use(cors())
 app.use(express.json())
 app.use(User)
 app.use(Message)
+app.use(Group)
 app.use(ForgotPassword)
 
 app.get('/test',(req,res)=>{

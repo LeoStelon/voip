@@ -11,22 +11,6 @@ const userSchema = new mongoose.Schema({
 		trim: true,
 		required: true,
 	},
-	email: {
-		type: String,
-		unique: true,
-		trim: true,
-		required: true,
-		validate(value) {
-			if (!validator.isEmail(value)) {
-				throw new Error("Email is invalid");
-			}
-		},
-	},
-	password: {
-		type: String,
-		trim: true,
-		minlength: 6,
-	},
 	displayimg: {
 		type: String,
 		default: "/assets/images/default-profile-icon.jpg",
@@ -45,10 +29,15 @@ const userSchema = new mongoose.Schema({
 	},
 	channels: [
 		{
-			channel: {
+			private: {
 				type: mongoose.Types.ObjectId,
 				required: true,
 				ref: "User",
+			},
+			group: {
+				type: mongoose.Types.ObjectId,
+				required: true,
+				ref: "Group",
 			},
 		},
 	],
@@ -91,25 +80,13 @@ userSchema.methods.generateForgotToken = async function () {
 };
 
 // Schema methods
-userSchema.statics.findByCredentials = async function (username, password) {
-	const user = await User.findOne({ username });
+userSchema.statics.findByCredentials = async function (phone) {
+	const user = await User.findOne({ phone });
 	if (!user) {
-		throw new Error("Invalid username or password");
-	}
-	const isMatch = await bcrypt.compare(password, user.password);
-	if (!isMatch) {
-		throw new Error("Invalid username or password");
+		throw new Error("Invalid phoneno");
 	}
 	return user;
 };
-
-userSchema.pre("save", async function (next) {
-	const user = this;
-	if (user.isModified("password")) {
-		user.password = await bcrypt.hash(user.password, 8);
-	}
-	next();
-});
 
 const User = new mongoose.model("User", userSchema);
 
